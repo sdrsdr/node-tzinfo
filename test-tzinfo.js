@@ -325,14 +325,14 @@ module.exports = {
                 t.equal(tz1.tt_gmtoff, -18000);
 
                 var tz2 = tzinfo.findTzinfo(this.zinfo, checks[dateType][1]);
-                t.equal(tz2, tz1);
+                t.deepEqual(tz2, tz1);
 
                 var tz2 = tzinfo.findTzinfo(this.zinfo, checks[dateType][2]);
                 t.equal(tz2.abbrev, 'EDT', 'test "' + dateType + '": ' + checks[dateType][2]);
                 t.equal(tz2.tt_gmtoff, -14400);
 
                 var tz3 = tzinfo.findTzinfo(this.zinfo, checks[dateType][3]);
-                t.equal(tz3, tz2);
+                t.deepEqual(tz3, tz2);
             }
             t.done();
         },
@@ -369,6 +369,27 @@ module.exports = {
             var tzdir = tzinfo.getZoneinfoDirectory();
             var list = tzinfo.listZoneinfoFiles(tzdir);
             t.contains(list, tzdir + '/' + "America/Los_Angeles");
+            t.done();
+        },
+
+        'should work with no params': function(t) {
+            var tzdir = tzinfo.getZoneinfoDirectory();
+            var list = tzinfo.listZoneinfoFiles();
+            t.contains(list, tzdir + '/' + "America/Los_Angeles");
+            t.done();
+        },
+
+        'should handle trailing / ': function(t) {
+            var tzdir = tzinfo.getZoneinfoDirectory();
+            var list = tzinfo.listZoneinfoFiles(tzdir+'/', true);
+            t.contains(list, "America/Los_Angeles");
+            for (let zonename of list) console.log(zonename);
+            t.done();
+        },
+
+        'should strip paths if asked': function(t) {
+            var list = tzinfo.listZoneinfoFiles(undefined, true);
+            t.contains(list, "America/Los_Angeles");
             t.done();
         },
 

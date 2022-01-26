@@ -27,6 +27,7 @@
  */
 
 
+import { dir } from 'console';
 import fs from 'fs';
 export const  zoneinfoDir = locateZoneinfoDirectory();
 
@@ -39,12 +40,13 @@ export interface tzinfo_change_t {
 }
 
 export interface tzinfo_change_ex_t extends tzinfo_change_t {
-    startat:number; //SECONDS since epoch
+    startat:number; //SECONDS since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
+    ttimes_index:number; //index to ttimes/types arrays or -1 if unknown
 }
 
 export interface info_t {
-    magic: string;             // 'TZif'
-    version: string;           // '\0' or '2'
+    magic: string;              // 'TZif'
+    version: string;            // '\0' or '2'
 
     ttisgmtcnt: number,         // num gmt/local indicators stored in `ttisgmt`
     ttisstdcnt: number,         // num standard/wall indicators stored in `ttisstd`
@@ -53,13 +55,13 @@ export interface info_t {
     typecnt:    number,         // num time transition structs stored in `tzinfo`
     charcnt:    number,         // total num chars to store the tz name abbreviations
 
-    ttimes:     number[],                // transition time timestamps (timecnt)
-    types:      number[],                // tzinfo index of each time transitioned to (timecnt)
-    tzinfo:     tzinfo_change_t[],                // tzinfo structs (typecnt)
+    ttimes:     number[],              // transition time timestamps (timecnt)
+    types:      number[],              // tzinfo index of each time transitioned to (timecnt)
+    tzinfo:     tzinfo_change_t[],     // tzinfo structs (typecnt)
     abbrevs:    string,                // concatenated tz name abbreviations (asciiz strings totaling charcnt bytes)
-    leaps:      unknown[],                // leap second descriptors (leapcnt)
-    ttisstd:    unknown[],                // transitions of tzinfo were std or wallclock times (ttisstdcnt)
-    ttisgmt:    unknown[],                // transitions of tzinfo were UTC or local time (ttisgmtcnt)
+    leaps:      unknown[],             // leap second descriptors (leapcnt)
+    ttisstd:    unknown[],             // transitions of tzinfo were std or wallclock times (ttisstdcnt)
+    ttisgmt:    unknown[],             // transitions of tzinfo were UTC or local time (ttisgmtcnt)
 
     _v1end:  number,
     _v2end:  number,
@@ -286,26 +288,25 @@ export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException 
     return fs.readFile(filepath, cb);
 }
 
-export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_t {
+export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_ex_t {
     var seconds = ((typeof date === 'number') ? date :          // milliseconds
                    (date instanceof Date) ? date.getTime() :    // Date object
                    new Date(date).getTime());                   // datetime string
     seconds = Math.floor(seconds / 1000);
 
     var index = module.exports.absearch(info.ttimes, seconds);
-    var tzindex;
 
     // if found, return the zoneinfo associated with the preceding time transition
     //   info.ttimes[] is the sorted array of time trantision unix timestamps
     //   info.types[] is the array of tzinfo[] indexes matching the time transitions
     //   info.tzinfo[] is the array of zoneinfo information
-    if (index >= 0) return info.tzinfo[info.types[index]];
+    if (index >= 0) return {startat:info.ttimes[index], ttimes_index:index, ...info.tzinfo[info.types[index]]};
 
     // if there are no time transitions but yes tzinfo, return the tzinfo (to always find GMT/UTC)
-    if (!info.timecnt && info.typecnt) return info.tzinfo[0];
+    if (!info.timecnt && info.typecnt) return {startat:0, ttimes_index:-1, ...info.tzinfo[0]};
 
     // if timestamp is before first transition, optionally return the oldest known tzinfo
-    if (firstIfTooOld && info.typecnt) return info.tzinfo[info.types[0]];
+    if (firstIfTooOld && info.typecnt) return {startat:0, ttimes_index:-1, ...info.tzinfo[info.types[0]]};
 
     return false;
 }
@@ -340,13 +341,18 @@ export function getZoneinfoDirectory( ) {
 // find the names of all the zoneinfo files on the system.
 // This is a blocking operation, so call it only on startup.
 // The list is small, 80 kb or so, so can be cached.
-export function listZoneinfoFiles( dirname:string ):string[] {
-    var tzfiles:string[] = new Array();
+export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolean=false ):string[] {
+
+    if (dirname==undefined) dirname=zoneinfoDir;
+    
+    while (dirname.endsWith('/')) dirname=dirname.substring(0,dirname.length-1);
+
     try {
         var files = fs.readdirSync(dirname);
     } catch (err) {
         return [];
     }
+    var tzfiles:string[] = new Array();
 
     var stat, buf = Buffer.alloc(8);
     for (var i=0; i<files.length; i++) {
@@ -354,14 +360,26 @@ export function listZoneinfoFiles( dirname:string ):string[] {
         try {
             stat = fs.statSync(filepath);
             if (stat.isDirectory()) {
-                var moreTzfiles = listZoneinfoFiles(filepath);
-                tzfiles = tzfiles.concat(moreTzfiles);
+                var moreTzfiles = listZoneinfoFiles(filepath,false);
+                if (strip_prefix==false) {
+                    tzfiles = tzfiles.concat(moreTzfiles);
+                } else {
+                    for (let f of moreTzfiles) {
+                        tzfiles.push(f.substring(dirname.length+1));
+                    }
+                }
             }
             else {
                 var fd = fs.openSync(filepath, 'r');
                 fs.readSync(fd, buf, 0, 5, 0);
                 fs.closeSync(fd);
-                if (buf.toString(undefined, 0, 4) === 'TZif') tzfiles.push(filepath);
+                if (buf.toString(undefined, 0, 4) === 'TZif') {
+                    if (strip_prefix==false) {
+                        tzfiles.push(filepath);
+                    } else {
+                        tzfiles.push(filepath.substring(dirname.length+1));
+                    }
+                }
             }
         } catch(e) { }
     }
