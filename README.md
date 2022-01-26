@@ -5,33 +5,46 @@ tzinfo
 Functions to parse /usr/share/zoneinfo timezone info files.
 Parses both v1 and v2 format zoneinfo files.
 
-
-Api
+What is tzinfo
 ---
 
-### tzinfo.getZoneinfoDirectory( )
+tzinfo is a collection of files holding records of past and future timestamps with changes of timezone offsets to universal time at those timestamps. All timestamps are in **seconds** from the epoch. 
+
+Generally speaking a timezone is represented by `info_t` record with fields:
+ * `ttimes` - a array of numbers holding the timestamps
+ * `types` - a array of numbers, the same size as `ttimes` - the number of offset type valid after the corresponding `ttimes` timestamp; a index into `tzinfo`
+ * `tzinfo` - a object of type `tzinfo_change_t` describing a offset from the universal time
+
+API
+---
+
+### `tzinfo.getZoneinfoDirectory( )`
 
 Return the auto-detected directory containing the system zoneinfo files.
 
-### tzinfo.listZoneinfoFiles( zoneinfoDirectory )
+### `tzinfo.listZoneinfoFiles( zoneinfoDirectory, strip_prefix )`
 
 List all the zoneinfo files contained in the named zoneinfo directory.  Recursively
 walks the directory and tests each file found.  This is a blocking operation, so call
 only on program load.  The results are small and can be easily cached.
 
-### tzinfo.readZoneinfoFile( tzname, cb )
+ * The `zoneinfoDirectory` can be set to `undefined` to use the auto-detected directory
+ * The `strip_prefix` has default value of `false` and indicates whether entries in the list will contain a `zoneinfoDirectory` prefix or look more like time zone names.
+ * Called with no parameters the function will return filenames from the auto-detected directory
+
+### `tzinfo.readZoneinfoFile( tzname, cb )`
 
 Read the zoneinfo file corresponding to the named timezone.  Returns to its callback a
 `Buffer` with the file contents, or an `Error`.
 
-### tzinfo.readZoneinfoFileSync( tzname )
+### `tzinfo.readZoneinfoFileSync( tzname )`
 
 Read the zoneinfo file corresponding to the named timezone.  Returns a `Buffer`
 containing the file contents, or throws an `Error`.
 
-### tzinfo.parseZoneinfo( buf )
+### `tzinfo.parseZoneinfo( buf )`
 
-Parse the zoneinfo file contained in `buf` and return it as an object.
+Parse the zoneinfo file contained in `buf` and return it as an object of type `info_t` .
 
 Returned object format:
 
@@ -56,11 +69,10 @@ Returned object format:
         ttisgmt:    // array of `ttisgmtcnt` transitions of tzinfo were UTC or local time
     };
 
-### tzinfo.findTzinfo( zoneinfo, date [,firstIfTooOld] )
+### `tzinfo.findTzinfo( zoneinfo, date [,firstIfTooOld] )`
 
-Find in the parsed `zoneinfo` the index of the tzinfo struct corresponding to the
-given `date`.  Returns a `tzinfo` struct or `false` if the date is before the earliest
-time transition on record or if date is not valid.  If `date` precedes the first known
+Searches for the `date` the parsed `zoneinfo` for the corresponding `tzinfo_change_t` struct and return it or `false` if the `date` is before the earliest
+time transition on record or if `date` is not valid.  If `date` precedes the first known
 time transition but `firstIfTooOld` is truthy, it returns the oldest tzinfo struct.
 If there are no time transitions defined but there is a tzinfo struct, it returns the
 tzinfo struct (to always succeed for GMT and UTC).
