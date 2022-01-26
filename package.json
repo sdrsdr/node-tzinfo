@@ -1,6 +1,6 @@
 {
-  "name": "tzinfo",
-  "version": "0.5.1",
+  "name": "tzinfoex",
+  "version": "0.5.2",
   "description": "parse tzinfo files",
   "keywords": [
     "tz",
@@ -11,7 +11,8 @@
   ],
   "main": "tzinfo.js",
   "author": "Andras",
-  "repository": "https://github.com/andrasq/node-tzinfo.git",
+  "contributors": ["Stoian Ivanov"],
+  "repository": "https://github.com/sdrsdr/node-tzinfo.git",
   "license": "Apache-2.0",
   "dependencies": {},
   "devDependencies": {
