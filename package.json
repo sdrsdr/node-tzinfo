@@ -11,7 +11,9 @@
   ],
   "main": "tzinfo.js",
   "author": "Andras",
-  "contributors": ["Stoian Ivanov"],
+  "contributors": [
+    "Stoian Ivanov"
+  ],
   "repository": "https://github.com/sdrsdr/node-tzinfo.git",
   "license": "Apache-2.0",
   "dependencies": {},
