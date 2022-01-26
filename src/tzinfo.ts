@@ -38,6 +38,10 @@ export interface tzinfo_change_t {
     abbrev: string,
 }
 
+export interface tzinfo_change_ex_t extends tzinfo_change_t {
+    startat:number; //SECONDS since epoch
+}
+
 export interface info_t {
     magic: string;             // 'TZif'
     version: string;           // '\0' or '2'
@@ -282,7 +286,7 @@ export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException 
     return fs.readFile(filepath, cb);
 }
 
-export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) {
+export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_t {
     var seconds = ((typeof date === 'number') ? date :          // milliseconds
                    (date instanceof Date) ? date.getTime() :    // Date object
                    new Date(date).getTime());                   // datetime string
