@@ -22,6 +22,11 @@ API
 
 Return the auto-detected directory containing the system zoneinfo files.
 
+
+### `tzinfo.setZoneinfoDirectory (zoneinfoDirectory)`
+
+Override the auto-detected directory containing the system zoneinfo files
+
 ### `tzinfo.listZoneinfoFiles( zoneinfoDirectory, strip_prefix )`
 
 List all the zoneinfo files contained in the named zoneinfo directory.  Recursively
@@ -102,11 +107,6 @@ Change Log
 - 0.3.0 - `readZoneinfoFile` and `readZoneinfoFileSync`, `findTzinfo`
 - 0.2.0 - first published release, with `parseZoneinfo`
 
-
-Todo
-----
-
-- `setZoneinfoDirectory` to override the auto-detected one
 
 
 Related Work

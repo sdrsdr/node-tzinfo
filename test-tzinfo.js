@@ -131,7 +131,7 @@ var fnFalse = function fnFalse() { return false };
 module.exports = {
     'locateZoneinfoDirectory': {
         'should have located the zoneinfo directory when loaded': function(t) {
-            var dir = tzinfo.zoneinfoDir;
+            var dir = tzinfo.getZoneinfoDirectory();
             t.equal(dir[0], '/');
             t.contains(dir, '/zoneinfo');
             t.done();
@@ -356,6 +356,15 @@ module.exports = {
                 t.fail();
             }
         },
+        'can be set via setZoneinfoDirectory': function(t) {
+            var dirname = tzinfo.getZoneinfoDirectory();
+            var dirname_new=dirname+'/./';
+            tzinfo.setZoneinfoDirectory(dirname_new);
+            t.equal(tzinfo.getZoneinfoDirectory(),dirname_new);
+            tzinfo.setZoneinfoDirectory(dirname);
+            t.equal(tzinfo.getZoneinfoDirectory(),dirname);
+            t.done();
+        },
     },
 
     'listZoneinfoFiles': {
@@ -383,7 +392,6 @@ module.exports = {
             var tzdir = tzinfo.getZoneinfoDirectory();
             var list = tzinfo.listZoneinfoFiles(tzdir+'/', true);
             t.contains(list, "America/Los_Angeles");
-            for (let zonename of list) console.log(zonename);
             t.done();
         },
 

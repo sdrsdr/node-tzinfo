@@ -29,13 +29,14 @@
 
 import { dir } from 'console';
 import fs from 'fs';
-export const  zoneinfoDir = locateZoneinfoDirectory();
+
+let  zoneinfoDir = locateZoneinfoDirectory();
 
 export interface tzinfo_change_t {
     idx: number,
     tt_gmtoff: number,     // seconds to add to GMT to get localtime
-    tt_isdst: number,               // whether DST in effect
-    tt_abbrind: number,             // byte offset into abbrevs of tz name abbreviation
+    tt_isdst: number,      // whether DST in effect
+    tt_abbrind: number,    // byte offset into abbrevs of tz name abbreviation
     abbrev: string,
 }
 
@@ -336,6 +337,10 @@ export function absearch( array:number[], val:number ) {
 
 export function getZoneinfoDirectory( ) {
     return zoneinfoDir;
+}
+
+export function setZoneinfoDirectory(dir:string) {
+    zoneinfoDir=dir;
 }
 
 // find the names of all the zoneinfo files on the system.
