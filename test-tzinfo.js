@@ -218,7 +218,17 @@ module.exports = {
                 t.contains(info.abbrevs, 'EDT\0');
                 t.contains(info.abbrevs, 'EST\0');
                 t.done();
-            })
+            });
+        },
+        'promise vairant should read zoneinfo file': function(t) {
+            tzinfo.readZoneinfoFile("America/New_York").then((buf)=>{
+                var info = tzinfo.parseZoneinfo(buf);
+                t.contains(info.abbrevs, 'EDT\0');
+                t.contains(info.abbrevs, 'EST\0');
+                t.done();
+            }).catch((err)=>{
+                t.fail('Promise rejected but should have been resolved');
+            });
         },
 
         'should return errors': function(t) {
@@ -227,6 +237,15 @@ module.exports = {
                 t.contains(err.message, 'ENOENT');
                 t.done();
             })
+        },
+        'promise vairant should return errors': function(t) {
+            tzinfo.readZoneinfoFile("America/Nonesuch").then(()=>{
+                t.fail('Promise resolved but should have been rejected');
+            }).catch((err)=>{
+                t.ok(err);
+                t.contains(err.message, 'ENOENT');
+                t.done();
+            });
         },
     },
 

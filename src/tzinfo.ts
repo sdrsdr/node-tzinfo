@@ -29,6 +29,7 @@
 
 import { dir } from 'console';
 import fs from 'fs';
+import { resolve } from 'path/posix';
 
 let  zoneinfoDir = locateZoneinfoDirectory();
 
@@ -284,9 +285,19 @@ export function readZoneinfoFileSync( tzname:string ):Buffer {
     return fs.readFileSync(filepath);
 }
 
-export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException | null, data: Buffer) => void ) {
-    var filepath = zoneinfoDir + '/' + tzname;
-    return fs.readFile(filepath, cb);
+export function readZoneinfoFile( tzname:string ):Promise<Buffer> ;
+export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException | null, data: Buffer) => void ):void ;
+export function readZoneinfoFile( tzname:string, cb?:(err: NodeJS.ErrnoException | null, data: Buffer) => void ):void|Promise<Buffer> {
+	var filepath = zoneinfoDir + '/' + tzname;
+	if (cb) {
+		return fs.readFile(filepath, cb);
+	}
+	return new Promise((resolve,reject)=>{
+		fs.readFile(filepath, (err,data)=>{
+			if (err) return reject(err);
+			resolve(data);
+		});
+	});
 }
 
 export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_ex_t {
@@ -391,6 +402,8 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 
     return tzfiles;
 }
+
+//export function getCachedZoneInfo(zonename:string):false|
 
 /** quicktest:
 

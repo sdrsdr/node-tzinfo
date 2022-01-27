@@ -37,10 +37,13 @@ only on program load.  The results are small and can be easily cached.
  * The `strip_prefix` has default value of `false` and indicates whether entries in the list will contain a `zoneinfoDirectory` prefix or look more like time zone names.
  * Called with no parameters the function will return filenames from the auto-detected directory
 
-### `tzinfo.readZoneinfoFile( tzname, cb )`
+### `tzinfo.readZoneinfoFile( tzname, [cb] )`
 
-Read the zoneinfo file corresponding to the named timezone.  Returns to its callback a
-`Buffer` with the file contents, or an `Error`.
+Read the zoneinfo file corresponding to the named timezone. 
+
+if the `cb` is provided it shoud take two parameters: err and buffer. If err is falsy buffer holds the timezone file content that need to be further parsed via `tzinfo.parseZoneinfo( buf )`
+
+if no `cb` is provided a promise that resolves to `Buffer`
 
 ### `tzinfo.readZoneinfoFileSync( tzname )`
 
