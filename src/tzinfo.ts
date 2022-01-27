@@ -27,9 +27,7 @@
  */
 
 
-import { dir } from 'console';
 import fs from 'fs';
-import { resolve } from 'path/posix';
 
 let  zoneinfoDir = locateZoneinfoDirectory();
 
@@ -403,7 +401,52 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
     return tzfiles;
 }
 
-//export function getCachedZoneInfo(zonename:string):false|
+let realnames=new Map<string,string>();
+let infocache=new Map<string,info_t>();
+
+export function getCachedZoneInfo(zonename:string):Promise<info_t> {
+	const zonefile=zoneinfoDir+'/'+zonename;
+	let realname=realnames.get(zonefile);
+
+
+	if (realname!=undefined) { //a cached path:
+
+		//check if negative cache
+		if(realname=='!!'+zonefile) return Promise.reject(new Error("No such zone"));
+
+		const zinfo=infocache.get(realname);
+		if (zinfo==undefined) {
+			//this should never happen but handle it anyway
+			//negate the cache path:
+			realnames.set(zonefile,'!!'+zonefile);
+			return Promise.reject(new Error("No such zone"));
+		}
+		return Promise.resolve(zinfo);
+	}
+
+	return new Promise((resolve,reject)=>{
+		fs.realpath(zonefile,(err, resolvedpath)=>{
+			if (err) {
+				realnames.set(zonefile,'!!'+zonefile); //set negative cache
+				return reject(new Error("No such zone file"));
+			}
+			fs.readFile(resolvedpath, (err,filedata)=>{
+				if (err) {
+					realnames.set(zonefile,'!!'+zonefile);//set negative cache
+					return reject(err);
+				}
+				const zinfo=parseZoneinfo(filedata);
+				if(zinfo==false) {
+					realnames.set(zonefile,'!!'+zonefile);//set negative cache
+					return reject(new Error("Failed to parse zone file"));
+				}
+				realnames.set(zonefile,resolvedpath);
+				infocache.set(resolvedpath,zinfo);
+				return resolve(zinfo);
+			});
+		});
+	});
+}
 
 /** quicktest:
 

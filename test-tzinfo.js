@@ -510,5 +510,63 @@ module.exports = {
                 t.done();
             },
         },
+        'getCachedZoneInfo':{
+            'should read and cache zoneinfo file': function(t) {
+                var spy_rf = t.spyOnce(fs, 'readFile');
+                var spy_rp = t.spyOnce(fs, 'realpath');
+
+                tzinfo.getCachedZoneInfo("America/New_York").then((info)=>{
+
+                    t.equal(spy_rf.callCount,1);
+                    t.equal(spy_rp.callCount,1);
+
+                    t.contains(info.abbrevs, 'EDT\0');
+                    t.contains(info.abbrevs, 'EST\0');
+
+
+                    tzinfo.getCachedZoneInfo("America/New_York").then((info1)=>{
+
+                        t.equal(spy_rf.callCount,1);
+                        t.equal(spy_rp.callCount,1);
+
+                        spy_rf.restore();
+                        spy_rp.restore();
+
+                        t.equal(info,info1)
+                        t.done();
+                    }).catch((err)=>{
+                        spy_rf.restore();
+                        spy_rp.restore();
+                        t.fail('Promise rejected but should have been resolved');
+                    })
+
+                }).catch((err)=>{
+                    spy_rf.restore();
+                    spy_rp.restore();
+                    t.fail('Promise rejected but should have been resolved');
+                });
+            },
+            'should fail and cache fail': function(t) {
+                var spy_rp = t.spyOnce(fs, 'realpath');
+
+                tzinfo.getCachedZoneInfo("America/Nonesuch").then((info)=>{
+                    spy_rp.restore();
+                    t.fail('Promise resolved but should have been rejected');
+                }).catch((err)=>{
+
+                    t.equal(spy_rp.callCount,1);
+
+                    tzinfo.getCachedZoneInfo("America/Nonesuch").then((info1)=>{
+                        spy_rp.restore();
+                        t.fail('Promise resolved but should have been rejected');
+    
+                    }).catch((err)=>{
+                        t.equal(spy_rp.callCount,1);
+                        spy_rp.restore();
+                        t.done();
+                    })
+                });
+            },
+        }
     },
 }
