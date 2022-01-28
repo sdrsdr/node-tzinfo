@@ -15,93 +15,149 @@ Generally speaking a timezone is represented by `info_t` record with fields:
  * `types` - a array of numbers, the same size as `ttimes` - the number of offset type valid after the corresponding `ttimes` timestamp; a index into `tzinfo`
  * `tzinfo` - a object of type `tzinfo_change_t` describing a offset from the universal time
 
-API
----
+With that information available you can say at (almost) any given universal time what is the current offset for the zone and when the next offset (DST) is about to happen.
 
-### `tzinfo.getZoneinfoDirectory( )`
+# API
+
+```ts
+function locateZoneinfoDirectory( ):string;
+```
+
+Detects system's zone info directory between  `/usr/share/zoneinfo` and `/usr/lib/zoneinfo`, This is used also done at module load time, so basically all directory related setup should be automagical.
+
+---
+&nbsp;
+
+
+```ts
+function getZoneinfoDirectory( )
+```
 
 Return the auto-detected directory containing the system zoneinfo files.
 
+---
+&nbsp;
 
-### `tzinfo.setZoneinfoDirectory (zoneinfoDirectory)`
-
+```ts
+function setZoneinfoDirectory(dir:string);
+```
 Override the auto-detected directory containing the system zoneinfo files
 
-### `tzinfo.listZoneinfoFiles( zoneinfoDirectory, strip_prefix )`
+---
+&nbsp;
 
-List all the zoneinfo files contained in the named zoneinfo directory.  Recursively
-walks the directory and tests each file found.  This is a blocking operation, so call
+```ts
+function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolean=false ):string[];
+```
+
+List all the zoneinfo files contained in the `dirname` directory. Recursively
+walks the directory and tests each file found. This is a blocking operation, so call
 only on program load.  The results are small and can be easily cached.
 
- * The `zoneinfoDirectory` can be set to `undefined` to use the auto-detected directory
+ * The `dirname` can be set to `undefined` to use the auto-detected directory
  * The `strip_prefix` has default value of `false` and indicates whether entries in the list will contain a `zoneinfoDirectory` prefix or look more like time zone names.
  * Called with no parameters the function will return filenames from the auto-detected directory
 
-### `tzinfo.readZoneinfoFile( tzname, [cb] )`
+---
+&nbsp;
+
+
+```ts
+export function readZoneinfoFile( tzname:string ):Promise<Buffer> ;
+export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException | null, data: Buffer) => void ):void ;
+
+```
 
 Read the zoneinfo file corresponding to the named timezone. 
 
-if the `cb` is provided it shoud take two parameters: err and buffer. If err is falsy buffer holds the timezone file content that need to be further parsed via `tzinfo.parseZoneinfo( buf )`
+if the `cb` is provided it should take two parameters: `err` and `data`. If err is falsy `data` holds the timezone file content that need to be further parsed via `parseZoneinfo`
 
-if no `cb` is provided a promise that resolves to `Buffer`
+if no `cb` is provided a promise that resolves to `Buffer` is returned
 
-### `tzinfo.readZoneinfoFileSync( tzname )`
+---
+&nbsp;
+
+```ts
+function readZoneinfoFileSync( tzname:string ):Buffer;
+```
 
 Read the zoneinfo file corresponding to the named timezone.  Returns a `Buffer`
 containing the file contents, or throws an `Error`.
 
-### `tzinfo.parseZoneinfo( buf )`
+---
+&nbsp;
 
-Parse the zoneinfo file contained in `buf` and return it as an object of type `info_t` .
+```ts
+function parseZoneinfo( buf:Buffer ):info_t|false;
+```
+
+Parse the zoneinfo file contained in `buf` and return it as an object of type `info_t`. If `buf` contains invalid data a `false` is returned
 
 Returned object format:
+```ts
 
-    zoneinfo = {
-        magic:      // 'TZif'
-        version:    // '\0' or '2'
+export interface info_t {
+    magic: string;              // 'TZif'
+    version: string;            // '\0' or '2'
 
-        ttisgmtcnt: // num gmt/local indicators stored in `ttisgmt`
-        ttisstdcnt: // num standard/wall indicators stored in `ttisstd`
-        leapcnt:    // num leap seconds for which data is stored in `leaps`
-        timecnt:    // num transition types stored in `types`
-        typecnt:    // num time transition structs stored in `tzinfo`
-        charcnt:    // total num chars to store the tz name abbreviations
+    ttisgmtcnt: number,         // num gmt/local indicators stored in `ttisgmt`
+    ttisstdcnt: number,         // num standard/wall indicators stored in `ttisstd`
+    leapcnt:    number,         // num leap seconds for which data is stored in `leaps`
+    timecnt:    number,         // num transition types stored in `types'
+    typecnt:    number,         // num time transition structs stored in `tzinfo`
+    charcnt:    number,         // total num chars to store the tz name abbreviations
 
-        ttimes:     // array of `timecnt` transition time timestamps
-        types:      // array of `timecnt` tzinfo indices for each time transitioned to
-        tzinfo:     // array of `typecnt` tzinfo structs
-                    //     { idx: , tt_gmtoff: , tt_isdst: , tt_abbrind: }
-        abbrevs:    // concatenated tz name abbreviations (asciiz strings totaling charcnt bytes)
-        leaps:      // array of `leapcnt` leap second descriptors
-        ttisstd:    // array of `ttisstdcnt` transitions of tzinfo were std or wallclock times
-        ttisgmt:    // array of `ttisgmtcnt` transitions of tzinfo were UTC or local time
-    };
+    ttimes:     number[],              // transition time timestamps (timecnt)
+    types:      number[],              // tzinfo index of each time transitioned to (timecnt)
+    tzinfo:     tzinfo_change_t[],     // tzinfo structs (typecnt)
+    abbrevs:    string,                // concatenated tz name abbreviations (asciiz strings totaling charcnt bytes)
+    leaps:      unknown[],             // leap second descriptors (leapcnt)
+    ttisstd:    unknown[],             // transitions of tzinfo were std or wallclock times (ttisstdcnt)
+    ttisgmt:    unknown[],             // transitions of tzinfo were UTC or local time (ttisgmtcnt)
 
-### `tzinfo.findTzinfo( zoneinfo, date [,firstIfTooOld] )`
+    _v1end:  number,
+    _v2end:  number,
+}
+```
+---
+&nbsp;  
 
-Searches for the `date` the parsed `zoneinfo` for the corresponding `tzinfo_change_t` struct and return it or `false` if the `date` is before the earliest
+
+
+```ts
+function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_ex_t;
+```
+Searches for the `date` in `info` for the corresponding `tzinfo_change_t` struct and return it extended  with the corresponding `ttime` timestamp as `start` and the used index in `ttime`.  On error `false` is returned like when the `date` is before the earliest
 time transition on record or if `date` is not valid.  If `date` precedes the first known
 time transition but `firstIfTooOld` is truthy, it returns the oldest tzinfo struct.
 If there are no time transitions defined but there is a tzinfo struct, it returns the
 tzinfo struct (to always succeed for GMT and UTC).
 
-Tzinfo format:
+tzinfo_change_t is defined as 
 
-    tzinfo = {
-        idx:        // index of this entry in `zoneinfo.tzinfo`
-        tt_gmtoff:  // seconds to add to GMT to get localtime
-        tt_isdst:   // whether daylight saving is in effect
-        tt_abbrind: // byte offset in abbrevs of tz name abbreviation
-        abbrev:     // timezone name abbreviation, eg 'EDT'
-    };
+```ts
+interface tzinfo_change_ex_t extends tzinfo_change_t {
+    startat:number; //SECONDS since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
+    ttimes_index:number; //index to ttimes/types arrays or -1 if unknown
+}
+```
 
 To find the POSIX-style timezone environment variable attributes associated with this `tzinfo`,
 look at `zoneinfo.ttisstd[tzinfo.idx]` and `zoneinfo.ttisgmt[tzinfo.idx]`.
 
+---
+&nbsp;
+
+```ts
+function getCachedZoneInfo(zonename:string):Promise<info_t>;
+```
+
+Combines `readZoneinfoFile`, `parseZoneinfo` and caches the result
 
 Change Log
 ----------
 
+- 0.6.0 - Port to TS, add getCachedZoneInfo, remove zoneinfoDir export, documentation changes
 - 0.5.1 - always find GMT zoneinfo
 - 0.5.0 - findTzinfo option to return the oldest known tzinfo struct for very old dates
 - 0.4.2 - more tests, make `readStringZ` stop on unterminated strings

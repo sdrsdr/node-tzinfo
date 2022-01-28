@@ -1,6 +1,6 @@
 {
   "name": "tzinfoex",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "parse tzinfo files",
   "keywords": [
     "tz",
