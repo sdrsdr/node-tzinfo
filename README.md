@@ -127,7 +127,7 @@ export interface info_t {
 ```ts
 function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_ex_t;
 ```
-Searches for the `date` in `info` for the corresponding `tzinfo_change_t` struct and return it extended  with the corresponding `ttime` timestamp as `start` and the used index in `ttime`.  On error `false` is returned like when the `date` is before the earliest
+Searches for the `date` in `info` for the corresponding `tzinfo_change_t` struct and return it extended  with the corresponding `ttime` timestamp as `start` and the used index in `ttime`. If `date` is a number it is considered as time in **miliseconds** since the epoch. On error `false` is returned like when the `date` is before the earliest
 time transition on record or if `date` is not valid.  If `date` precedes the first known
 time transition but `firstIfTooOld` is truthy, it returns the oldest tzinfo struct.
 If there are no time transitions defined but there is a tzinfo struct, it returns the
@@ -137,7 +137,7 @@ tzinfo_change_t is defined as
 
 ```ts
 interface tzinfo_change_ex_t extends tzinfo_change_t {
-    startat:number; //SECONDS since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
+    startat:number; //miliseconds since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
     ttimes_index:number; //index to ttimes/types arrays or -1 if unknown
 }
 ```
@@ -149,10 +149,44 @@ look at `zoneinfo.ttisstd[tzinfo.idx]` and `zoneinfo.ttisgmt[tzinfo.idx]`.
 &nbsp;
 
 ```ts
+function nextTzinfo(info: info_t, current: tzinfo_change_ex_t): false | tzinfo_change_ex_t
+```
+
+Finds the next change after `current`. Returns false if no more changes are expected
+
+---
+&nbsp;
+
+```ts
 function getCachedZoneInfo(zonename:string):Promise<info_t>;
 ```
 
 Combines `readZoneinfoFile`, `parseZoneinfo` and caches the result
+
+Example
+-------
+
+```ts
+import { getCachedZoneInfo, findTzinfo, nextTzinfo } from "tzinfo";
+getCachedZoneInfo('Europe/Sofia').then(zi=>{
+	if (!zi) process.exit(-1);
+	let now=findTzinfo(zi, Date.now(),true);
+	if (now==false) {
+		console.error("The database seems broken?");
+		process.exit(-1);
+	}
+	console.log("current offset in this tz is "+now.tt_gmtoff+" seconds or "+now.tt_gmtoff/3600+' hours in effect sice '+new Date(now.startat*1000)+' idx:'+now.ttimes_index);
+	let next=nextTzinfo(zi,now);
+	if (next==false) {
+		console.log("no shifts in offset are planned!");
+	} else {
+		console.log("next change in offset will happen at "+new Date((next.startat-1)*1000)+' new offset will be '+next.tt_gmtoff+" seconds or "+next.tt_gmtoff/3600+' hours');
+	}
+}).catch(err=>{
+	console.error(err);
+	process.exit(-1);
+})
+```
 
 Change Log
 ----------

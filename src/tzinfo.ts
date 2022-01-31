@@ -40,7 +40,7 @@ export interface tzinfo_change_t {
 }
 
 export interface tzinfo_change_ex_t extends tzinfo_change_t {
-    startat:number; //SECONDS since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
+    startat:number; //miliseconds since epoch or 0 if unknown (better use ttimes_index for unknown indicator)
     ttimes_index:number; //index to ttimes/types arrays or -1 if unknown
 }
 
@@ -304,13 +304,13 @@ export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:
                    new Date(date).getTime());                   // datetime string
     seconds = Math.floor(seconds / 1000);
 
-    var index = module.exports.absearch(info.ttimes, seconds);
+    var index = absearch(info.ttimes, seconds);
 
     // if found, return the zoneinfo associated with the preceding time transition
     //   info.ttimes[] is the sorted array of time trantision unix timestamps
     //   info.types[] is the array of tzinfo[] indexes matching the time transitions
     //   info.tzinfo[] is the array of zoneinfo information
-    if (index >= 0) return {startat:info.ttimes[index], ttimes_index:index, ...info.tzinfo[info.types[index]]};
+    if (index >= 0) return {startat:info.ttimes[index]*1000, ttimes_index:index, ...info.tzinfo[info.types[index]]};
 
     // if there are no time transitions but yes tzinfo, return the tzinfo (to always find GMT/UTC)
     if (!info.timecnt && info.typecnt) return {startat:0, ttimes_index:-1, ...info.tzinfo[0]};
@@ -321,13 +321,21 @@ export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:
     return false;
 }
 
+export function nextTzinfo( info:info_t, current: tzinfo_change_ex_t) : false|tzinfo_change_ex_t {
+    if (current.ttimes_index==-1 || current.ttimes_index+1>=info.ttimes.length) return false;
+    const nexti=current.ttimes_index+1;
+    const typ=info.types[nexti];
+    if (typ>=info.tzinfo.length) return false;
+    return {ttimes_index:nexti,startat:info.ttimes[nexti]*1000, ...info.tzinfo[typ]};
+}
+
 // search the sorted array for the index of the largest element
 // not greater than val.  Returns the index of the element if found, else -1.
 export function absearch( array:number[], val:number ) {
     var hi, lo, mid;
 
     // binary search to approximate the location of val
-    for (lo = 0, hi = array.length - 1; (hi - lo) > 30; ) {
+    for (lo = 0, hi = array.length - 1; (hi - lo) > 15; ) {
         mid = ((hi + lo) / 2) >>> 0;
         if (val < array[mid]) hi = mid - 1;
         else lo = mid;
