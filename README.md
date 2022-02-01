@@ -175,12 +175,12 @@ getCachedZoneInfo('Europe/Sofia').then(zi=>{
 		console.error("The database seems broken?");
 		process.exit(-1);
 	}
-	console.log("current offset in this tz is "+now.tt_gmtoff+" seconds or "+now.tt_gmtoff/3600+' hours in effect sice '+new Date(now.startat*1000)+' idx:'+now.ttimes_index);
+	console.log("current offset in this tz is "+now.tt_gmtoff+" seconds or "+now.tt_gmtoff/3600+' hours in effect sice '+new Date(now.startat)+' idx:'+now.ttimes_index);
 	let next=nextTzinfo(zi,now);
 	if (next==false) {
 		console.log("no shifts in offset are planned!");
 	} else {
-		console.log("next change in offset will happen at "+new Date((next.startat-1)*1000)+' new offset will be '+next.tt_gmtoff+" seconds or "+next.tt_gmtoff/3600+' hours');
+		console.log("next change in offset will happen at "+new Date(next.startat-1)+' new offset will be '+next.tt_gmtoff+" seconds or "+next.tt_gmtoff/3600+' hours');
 	}
 }).catch(err=>{
 	console.error(err);
