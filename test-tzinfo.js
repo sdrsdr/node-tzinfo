@@ -391,7 +391,7 @@ module.exports = {
 		},
 		'can be set via setZoneinfoDirectory': function(t) {
 			var dirname = tzinfo.getZoneinfoDirectory();
-			var dirname_new=dirname+'/./';
+			var dirname_new=dirname+'/.';
 			tzinfo.setZoneinfoDirectory(dirname_new);
 			t.equal(tzinfo.getZoneinfoDirectory(),dirname_new);
 			tzinfo.setZoneinfoDirectory(dirname);
