@@ -28,6 +28,7 @@
 
 
 import fs from 'fs';
+import { resolve } from 'path/posix';
 
 let  zoneinfoDir = locateZoneinfoDirectory();
 
@@ -358,6 +359,7 @@ export function getZoneinfoDirectory( ) {
 
 export function setZoneinfoDirectory(dir:string) {
 	zoneinfoDir=dir;
+	while (zoneinfoDir.endsWith('/')) zoneinfoDir=zoneinfoDir.substring(0,zoneinfoDir.length-1);
 }
 
 // find the names of all the zoneinfo files on the system.
@@ -387,7 +389,7 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 					tzfiles = tzfiles.concat(moreTzfiles);
 				} else {
 					for (let f of moreTzfiles) {
-						tzfiles.push(f.substring(dirname.length+1));
+						tzfiles.push(f.substring(zoneinfoDir.length+1));
 					}
 				}
 			}
@@ -399,7 +401,7 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 					if (strip_prefix==false) {
 						tzfiles.push(filepath);
 					} else {
-						tzfiles.push(filepath.substring(dirname.length+1));
+						tzfiles.push(filepath.substring(zoneinfoDir.length+1));
 					}
 				}
 			}
@@ -409,10 +411,97 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 	return tzfiles;
 }
 
+let lczones2zi:Map<string,info_t>|undefined=undefined;
 let realnames=new Map<string,string>();
 let infocache=new Map<string,info_t>();
 
+export function precacheZones():Promise<true> {
+	const zimap=new Map<string,info_t>();
+	return  new Promise(resolve=>{
+		precacheZonesInDir(zoneinfoDir,zimap).then(()=>{
+			lczones2zi=zimap;
+			resolve(true);
+		}).catch(()=>{
+			resolve(true);
+		});
+	});
+}
+
+function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>):Promise<true> {return new Promise(resolve=>{
+	while (dirname.endsWith('/')) dirname=dirname.substring(0,dirname.length-1);
+	fs.readdir(dirname,(err,files)=>{
+		if (err) return resolve(true);
+		let totry=files.length;
+		for (const f of files) {
+			var filepath = dirname + '/' + f;
+			const zinfo=infocache.get(filepath);
+			if (zinfo) {
+				zimap.set(filepath.substring(zoneinfoDir.length+1).toLocaleLowerCase(),zinfo);
+				totry--;
+				if (totry==0) {
+					return resolve(true);
+				}
+				continue;
+			}
+			fs.stat(filepath,(err,stat)=>{
+				if (err) {
+					totry--; 
+					if (totry==0) resolve(true);
+					return
+				}
+				if (stat.isDirectory()) {
+					precacheZonesInDir(filepath,zimap).then (()=>{
+						totry--;
+						if (totry==0) resolve(true);
+					}).catch(()=>{
+						totry--;
+						if (totry==0) resolve(true);
+					})
+				} else {
+					fs.realpath(filepath,(err, resolvedpath)=>{
+						if (err) {
+							realnames.set(filepath,'!!'+filepath); //set negative cache
+							totry--;
+							if (totry==0) resolve(true);
+							return;
+						}
+						fs.readFile(resolvedpath, (err,filedata)=>{
+							if (err) {
+								realnames.set(filepath,'!!'+filepath);//set negative cache
+								totry--;
+								if (totry==0) resolve(true);
+								return;
+							}
+							const zinfo=parseZoneinfo(filedata);
+							if(zinfo==false) {
+								realnames.set(filepath,'!!'+filepath);//set negative cache
+								totry--;
+								if (totry==0) resolve(true);
+								return;
+							}
+							realnames.set(filepath,resolvedpath);
+							infocache.set(resolvedpath,zinfo);
+							zimap.set(filepath.substring(zoneinfoDir.length+1).toLocaleLowerCase(),zinfo);
+							totry--;
+							if (totry==0) resolve(true);
+						});
+					});
+				}
+			})
+		}
+	});
+})}
+
+
+
 export function getCachedZoneInfo(zonename:string):Promise<info_t> {
+	
+	if (lczones2zi) {
+		const zi=lczones2zi.get(zonename.toLowerCase());
+		if (zi) return Promise.resolve(zi);
+		return Promise.reject(new Error("No such zone"));
+	}
+
 	const zonefile=zoneinfoDir+'/'+zonename;
 	let realname=realnames.get(zonefile);
 
