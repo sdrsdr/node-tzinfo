@@ -394,6 +394,8 @@ module.exports = {
 			var dirname_new=dirname+'/.';
 			tzinfo.setZoneinfoDirectory(dirname_new);
 			t.equal(tzinfo.getZoneinfoDirectory(),dirname_new);
+			tzinfo.setZoneinfoDirectory(dirname_new+'/');
+			t.equal(tzinfo.getZoneinfoDirectory(),dirname_new);
 			tzinfo.setZoneinfoDirectory(dirname);
 			t.equal(tzinfo.getZoneinfoDirectory(),dirname);
 			t.done();
@@ -581,6 +583,33 @@ module.exports = {
 					})
 				});
 			},
-		}
+		},
+		'getCachedZoneInfo':{
+			'should enable case insensitive lookup and capture zone names': function (t) {
+				tzinfo.getCachedZoneInfo("Europe/Sofia").then(()=>{
+					tzinfo.getCachedZoneInfo("europe/sofia").then(()=>{
+						t.fail('Promise resolved but should have been rejected');
+					}).catch((err)=> {
+						let canonical_list=[];
+						tzinfo.precacheZones(canonical_list).then(()=>{
+							t.ok(canonical_list.length>10);
+							tzinfo.getCachedZoneInfo("eUrope/sofIa").then(()=>{
+								tzinfo.getCachedZoneInfo("americA/nonesucH").then(()=>{
+									t.fail('Promise resolved but should have been rejected');
+								}).catch(()=>{
+									t.done();
+								});
+							}).catch(()=>{
+								t.fail('Promise rejected but should have been resolved');
+							})
+						}).catch(()=>{
+							t.fail('Promise rejected but should have been resolved');
+						})
+					});
+				}).catch((err)=>{
+					t.fail('Promise rejected but should have been resolved');
+				});
+			}
+		},
 	},
 }
