@@ -1,4 +1,4 @@
-tzinfo
+tzinfoex
 ======
 
 
@@ -8,7 +8,7 @@ Parses both v1 and v2 format zoneinfo files.
 What is tzinfo
 ---
 
-tzinfo is a collection of files holding records of past and future timestamps with changes of timezone offsets to universal time at those timestamps. All timestamps are in **seconds** from the epoch. 
+tzinfo is a collection of files holding records of past and future timestamps with changes of timezone offsets to universal time at those timestamps. All timestamps in the database are in **seconds** from the epoch. 
 
 Generally speaking a timezone is represented by `info_t` record with fields:
  * `ttimes` - a array of numbers holding the timestamps
@@ -23,7 +23,7 @@ With that information available you can say at (almost) any given universal time
 function locateZoneinfoDirectory( ):string;
 ```
 
-Detects system's zone info directory between  `/usr/share/zoneinfo` and `/usr/lib/zoneinfo`, This is used also done at module load time, so basically all directory related setup should be automagical.
+Detects system's zone info directory between  `/usr/share/zoneinfo` and `/usr/lib/zoneinfo`, This is used at module load time for auto configuration. All directory related setup should be automagical.
 
 ---
 &nbsp;
@@ -33,7 +33,7 @@ Detects system's zone info directory between  `/usr/share/zoneinfo` and `/usr/li
 function getZoneinfoDirectory( )
 ```
 
-Return the auto-detected directory containing the system zoneinfo files.
+Return the auto-detected/currently set directory containing the system zoneinfo files.
 
 ---
 &nbsp;
@@ -52,11 +52,13 @@ function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolean=false
 
 List all the zoneinfo files contained in the `dirname` directory. Recursively
 walks the directory and tests each file found. This is a blocking operation, so call
-only on program load.  The results are small and can be easily cached.
+only on program load.  The results are small and can be easily cached.  
 
  * The `dirname` can be set to `undefined` to use the auto-detected directory
  * The `strip_prefix` has default value of `false` and indicates whether entries in the list will contain a `zoneinfoDirectory` prefix or look more like time zone names.
  * Called with no parameters the function will return filenames from the auto-detected directory
+
+`precacheZones` function does almost the same amount of work, **asynchronously**, usually completes under one second and can register all zone names while enabling speedy, case insensitive lookups via `getCachedZoneInfo`.
 
 ---
 &nbsp;
@@ -163,6 +165,18 @@ function getCachedZoneInfo(zonename:string):Promise<info_t>;
 
 Combines `readZoneinfoFile`, `parseZoneinfo` and caches the result
 
+---
+&nbsp;
+
+```ts
+export function precacheZones(capture_canonical_names?:string[]):Promise<true>;
+```
+
+Asynchronously precache all zone info data. Post completion `getCachedZoneInfo` is just map lookup. `getCachedZoneInfo` does **not** depend on `precacheZones` but it will benefit significantly from the precache in expense of sub 10MB of RAM. Beside speed improvements zone name lookup becomes **case insensitive** as all zones are now known and such lookup can be done easily. If you want to capture the list of canonical zone names e.g. Europe/Paris etc, you need to pass an empty array as `capture_canonical_names` parameter. Zone names will be pushed there before a lowercase version is stored in internal map. With a SSD disk and i5 circa 2011 the precaching of recent zone info database takes about 600ms. Heap usage goes up by 9MB while the database is calculated as 5MB ondisk.
+
+---
+&nbsp;
+
 Example
 -------
 
@@ -191,6 +205,7 @@ getCachedZoneInfo('Europe/Sofia').then(zi=>{
 Change Log
 ----------
 
+- 0.7.0 - precacheZones, case insensitive zone name lookup
 - 0.6.0 - Port to TS, add getCachedZoneInfo, remove zoneinfoDir export, documentation changes
 - 0.5.1 - always find GMT zoneinfo
 - 0.5.0 - findTzinfo option to return the oldest known tzinfo struct for very old dates

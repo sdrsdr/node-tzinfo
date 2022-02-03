@@ -82,7 +82,7 @@ export interface info_t {
 //     ttisgmtcnt 1B show whether transition times were gmt or local (?)
 //
 export function parseZoneinfo( buf:Buffer ):info_t|false {
-	var info = parseV1Zoneinfo(buf, 0);
+	let info = parseV1Zoneinfo(buf);
 	if (info==false) return false;
 
 	if (info.version === '2') {
@@ -93,8 +93,8 @@ export function parseZoneinfo( buf:Buffer ):info_t|false {
 }
 
 
-function parseV1Zoneinfo( buf:Buffer, pos:number ):info_t|false {
-	var info:info_t = {
+function parseV1Zoneinfo( buf:Buffer ):info_t|false {
+	let info:info_t = {
 		magic:   buf.toString(undefined, 0, 4), // 'TZif'
 		version: buf.toString(undefined, 4, 5), // '\0' or '2'
 
@@ -116,21 +116,21 @@ function parseV1Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 		_v1end:  0,
 		_v2end:  0,
 	};
-	var pos = 4 + 1 + 15 + 24;                  // magic + version + reserved + header
+	let pos = 4 + 1 + 15 + 24;                  // magic + version + reserved + header
 
 	if (info.magic !== 'TZif' || (info.version !== '\0' && info.version !== '2')) return false;
 
-	for (var i=0; i<info.timecnt; i++) {
+	for (let i=0; i<info.timecnt; i++) {
 		info.ttimes[i] = readInt32(buf, pos);
 		pos += 4;
 	}
 
-	for (var i=0; i<info.timecnt; i++) {
+	for (let i=0; i<info.timecnt; i++) {
 		info.types[i] = buf[pos];
 		pos += 1;
 	}
 
-	for (var i=0; i<info.typecnt; i++) {
+	for (let i=0; i<info.typecnt; i++) {
 		info.tzinfo[i] = {
 			idx: i,
 			tt_gmtoff: readInt32(buf, pos),     // seconds to add to GMT to get localtime
@@ -143,12 +143,12 @@ function parseV1Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 
 	info.abbrevs = buf.toString(undefined, pos, pos + info.charcnt);
 	// annotate the tzinfo structs with the tz name abbrev
-	for (var i=0; i<info.typecnt; i++) {
+	for (let i=0; i<info.typecnt; i++) {
 		info.tzinfo[i].abbrev = readStringZ(buf, pos + info.tzinfo[i].tt_abbrind);
 	}
 	pos += info.charcnt;
 
-	for (var i=0; i<info.leapcnt; i++) {
+	for (let i=0; i<info.leapcnt; i++) {
 		info.leaps[i] = {
 			time: readInt32(buf, pos),          // leap second occurs at
 			add:  readInt32(buf, pos + 4),      // total num seconds to add
@@ -156,11 +156,11 @@ function parseV1Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 		pos += 8;
 	}
 
-	for (var i=0; i<info.ttisstdcnt; i++) {
+	for (let i=0; i<info.ttisstdcnt; i++) {
 		info.ttisstd[i] = buf[pos++];
 	}
 
-	for (var i=0; i<info.ttisgmtcnt; i++) {
+	for (let i=0; i<info.ttisgmtcnt; i++) {
 		info.ttisgmt[i] = buf[pos++];
 	}
 
@@ -171,7 +171,7 @@ function parseV1Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 
 function parseV2Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 	// read-read the V2 header, then the V2 data
-	var info:info_t = {
+	let info:info_t = {
 		magic:   buf.toString(undefined, pos+0, pos+4),
 		version: buf.toString(undefined, pos+4, pos+5),
 
@@ -198,37 +198,37 @@ function parseV2Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 	// TODO: maybe should throw if not parseable
 	if (info.magic !== 'TZif' || (info.version !== '\0' && info.version !== '2')) return false;
 
-	for (var i=0; i<info.timecnt; i++) {
+	for (let i=0; i<info.timecnt; i++) {
 		info.ttimes[i] = readInt64(buf, pos);
 		pos += 8;
 	}
 
-	for (var i=0; i<info.timecnt; i++) {
+	for (let i=0; i<info.timecnt; i++) {
 		info.types[i] = buf[pos++];
 	}
 
-	for (var i=0; i<info.typecnt; i++) {
+	for (let i=0; i<info.typecnt; i++) {
 		info.tzinfo[i] = { idx: i, tt_gmtoff: readInt32(buf, pos), tt_isdst: buf[pos+4], tt_abbrind: buf[pos+5], abbrev:'' };
 		pos += 6;
 	}
 
 	info.abbrevs = buf.toString(undefined, pos, pos + info.charcnt);
 	// annotate the tzinfo structs with the tz name abbrev
-	for (var i=0; i<info.typecnt; i++) {
+	for (let i=0; i<info.typecnt; i++) {
 		info.tzinfo[i].abbrev = readStringZ(buf, pos + info.tzinfo[i].tt_abbrind);
 	}
 	pos += info.charcnt;
 
-	for (var i=0; i<info.leapcnt; i++) {
+	for (let i=0; i<info.leapcnt; i++) {
 		info.leaps[i] = { time: readInt64(buf, pos), add:  readInt32(buf, pos + 8) };
 		pos += 12;
 	}
 
-	for (var i=0; i<info.ttisstdcnt; i++) {
+	for (let i=0; i<info.ttisstdcnt; i++) {
 		info.ttisstd[i] = buf[pos++];
 	}
 
-	for (var i=0; i<info.ttisgmtcnt; i++) {
+	for (let i=0; i<info.ttisgmtcnt; i++) {
 		info.ttisgmt[i] = buf[pos++];
 	}
 
@@ -239,11 +239,12 @@ function parseV2Zoneinfo( buf:Buffer, pos:number ):info_t|false {
 
 // return the NUL-terminated string from buf at offset
 export function readStringZ( buf:Buffer, offset:number ):string {
-	for (var end=offset; buf[end]; end++) ;
+	let end=offset;
+	for (; buf[end]; end++) ;
 	return buf.toString(undefined, offset, end);
 }
 export function readInt32( buf:Buffer, offset:number ):number {
-	var val = (buf[offset++] * 0x1000000) + (buf[offset++] << 16) + (buf[offset++] << 8) + buf[offset++];
+	let val = (buf[offset++] * 0x1000000) + (buf[offset++] << 16) + (buf[offset++] << 8) + buf[offset++];
 	return (val & 0x80000000) ? val - 0x100000000 : val;
 }
 export function readInt64( buf:Buffer, offset:number ):number {
@@ -251,27 +252,27 @@ export function readInt64( buf:Buffer, offset:number ):number {
 		// negative
 		// a large negative eg FFFE can be built out of a scaled negative prefix FF * 256 and
 		// and a positive additive offset FE, ie (-1 * 256) + 254 = -2.
-		var v1 = readInt32(buf, offset);
-		var v2 = readInt32(buf, offset + 4);
+		let v1 = readInt32(buf, offset);
+		let v2 = readInt32(buf, offset + 4);
 		if (v2 < 0) v2 += 0x100000000;
 		return v1 * 0x100000000 + v2;
 	} else {
 		// positive
-		var uval = 0;
-		for (var i=offset; i<offset+8; i++) uval = (uval * 256) + buf[i];
+		let uval = 0;
+		for (let i=offset; i<offset+8; i++) uval = (uval * 256) + buf[i];
 		return uval;
 	}
 }
 
 
 export function locateZoneinfoDirectory( ):string {
-	var tryDirs = [
+	let tryDirs = [
 		'/usr/share/zoneinfo',
 		'/usr/lib/zoneinfo',
 	];
-	for (var i=0; i<tryDirs.length; i++) {
+	for (let i=0; i<tryDirs.length; i++) {
 		try {
-			var stat = fs.statSync(tryDirs[i]);
+			let stat = fs.statSync(tryDirs[i]);
 			if (stat.isDirectory()) return tryDirs[i];
 		}
 		catch (e) { }
@@ -280,14 +281,14 @@ export function locateZoneinfoDirectory( ):string {
 }
 
 export function readZoneinfoFileSync( tzname:string ):Buffer {
-	var filepath = zoneinfoDir + '/' + tzname;
+	let filepath = zoneinfoDir + '/' + tzname;
 	return fs.readFileSync(filepath);
 }
 
 export function readZoneinfoFile( tzname:string ):Promise<Buffer> ;
 export function readZoneinfoFile( tzname:string, cb:(err: NodeJS.ErrnoException | null, data: Buffer) => void ):void ;
 export function readZoneinfoFile( tzname:string, cb?:(err: NodeJS.ErrnoException | null, data: Buffer) => void ):void|Promise<Buffer> {
-	var filepath = zoneinfoDir + '/' + tzname;
+	let filepath = zoneinfoDir + '/' + tzname;
 	if (cb) {
 		return fs.readFile(filepath, cb);
 	}
@@ -300,12 +301,12 @@ export function readZoneinfoFile( tzname:string, cb?:(err: NodeJS.ErrnoException
 }
 
 export function findTzinfo( info:info_t, date:number|Date|string, firstIfTooOld:boolean ) : false|tzinfo_change_ex_t {
-	var seconds = ((typeof date === 'number') ? date :          // milliseconds
+	let seconds = ((typeof date === 'number') ? date :          // milliseconds
 				   (date instanceof Date) ? date.getTime() :    // Date object
 				   new Date(date).getTime());                   // datetime string
 	seconds = Math.floor(seconds / 1000);
 
-	var index = absearch(info.ttimes, seconds);
+	let index = absearch(info.ttimes, seconds);
 
 	// if found, return the zoneinfo associated with the preceding time transition
 	//   info.ttimes[] is the sorted array of time trantision unix timestamps
@@ -333,7 +334,7 @@ export function nextTzinfo( info:info_t, current: tzinfo_change_ex_t) : false|tz
 // search the sorted array for the index of the largest element
 // not greater than val.  Returns the index of the element if found, else -1.
 export function absearch( array:number[], val:number ) {
-	var hi, lo, mid;
+	let hi, lo, mid;
 
 	// binary search to approximate the location of val
 	for (lo = 0, hi = array.length - 1; (hi - lo) > 15; ) {
@@ -370,21 +371,22 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 	if (dirname==undefined) dirname=zoneinfoDir;
 	
 	while (dirname.endsWith('/')) dirname=dirname.substring(0,dirname.length-1);
-
+	
+	let files;
 	try {
-		var files = fs.readdirSync(dirname);
+		files = fs.readdirSync(dirname);
 	} catch (err) {
 		return [];
 	}
-	var tzfiles:string[] = new Array();
+	let tzfiles:string[] = new Array();
 
-	var stat, buf = Buffer.alloc(8);
-	for (var i=0; i<files.length; i++) {
-		var filepath = dirname + '/' + files[i];
+	let stat, buf = Buffer.alloc(8);
+	for (let i=0; i<files.length; i++) {
+		let filepath = dirname + '/' + files[i];
 		try {
 			stat = fs.statSync(filepath);
 			if (stat.isDirectory()) {
-				var moreTzfiles = listZoneinfoFiles(filepath,false);
+				let moreTzfiles = listZoneinfoFiles(filepath,false);
 				if (strip_prefix==false) {
 					tzfiles = tzfiles.concat(moreTzfiles);
 				} else {
@@ -394,7 +396,7 @@ export function listZoneinfoFiles( dirname:string|undefined, strip_prefix:boolea
 				}
 			}
 			else {
-				var fd = fs.openSync(filepath, 'r');
+				let fd = fs.openSync(filepath, 'r');
 				fs.readSync(fd, buf, 0, 5, 0);
 				fs.closeSync(fd);
 				if (buf.toString(undefined, 0, 4) === 'TZif') {
@@ -415,10 +417,10 @@ let lczones2zi:Map<string,info_t>|undefined=undefined;
 let realnames=new Map<string,string>();
 let infocache=new Map<string,info_t>();
 
-export function precacheZones():Promise<true> {
+export function precacheZones(capture_canonical_names?:string[]):Promise<true> {
 	const zimap=new Map<string,info_t>();
 	return  new Promise(resolve=>{
-		precacheZonesInDir(zoneinfoDir,zimap).then(()=>{
+		precacheZonesInDir(zoneinfoDir,zimap,capture_canonical_names).then(()=>{
 			lczones2zi=zimap;
 			resolve(true);
 		}).catch(()=>{
@@ -427,16 +429,18 @@ export function precacheZones():Promise<true> {
 	});
 }
 
-function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>):Promise<true> {return new Promise(resolve=>{
+function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>,capture_canonical_names?:string[]):Promise<true> {return new Promise(resolve=>{
 	while (dirname.endsWith('/')) dirname=dirname.substring(0,dirname.length-1);
 	fs.readdir(dirname,(err,files)=>{
 		if (err) return resolve(true);
 		let totry=files.length;
 		for (const f of files) {
-			var filepath = dirname + '/' + f;
+			let filepath = dirname + '/' + f;
 			const zinfo=infocache.get(filepath);
 			if (zinfo) {
-				zimap.set(filepath.substring(zoneinfoDir.length+1).toLocaleLowerCase(),zinfo);
+				const canonical_name=filepath.substring(zoneinfoDir.length+1);
+				if (capture_canonical_names) capture_canonical_names.push(canonical_name)
+				zimap.set(canonical_name.toLocaleLowerCase(),zinfo);
 				totry--;
 				if (totry==0) {
 					return resolve(true);
@@ -450,7 +454,7 @@ function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>):Promise<tr
 					return
 				}
 				if (stat.isDirectory()) {
-					precacheZonesInDir(filepath,zimap).then (()=>{
+					precacheZonesInDir(filepath,zimap,capture_canonical_names).then (()=>{
 						totry--;
 						if (totry==0) resolve(true);
 					}).catch(()=>{
@@ -481,7 +485,9 @@ function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>):Promise<tr
 							}
 							realnames.set(filepath,resolvedpath);
 							infocache.set(resolvedpath,zinfo);
-							zimap.set(filepath.substring(zoneinfoDir.length+1).toLocaleLowerCase(),zinfo);
+							const canonical_name=filepath.substring(zoneinfoDir.length+1);
+							if (capture_canonical_names) capture_canonical_names.push(canonical_name)
+							zimap.set(canonical_name.toLocaleLowerCase(),zinfo);
 							totry--;
 							if (totry==0) resolve(true);
 						});
@@ -545,10 +551,3 @@ export function getCachedZoneInfo(zonename:string):Promise<info_t> {
 	});
 }
 
-/** quicktest:
-
-var info = parseZoneinfo(fs.readFileSync('/usr/share/zoneinfo/America/New_York'));
-var info = parseZoneinfo(fs.readFileSync('/usr/share/zoneinfo/America/Jamaica'));
-console.log("AR: sample zoneinfo", JSON.stringify(info).length, info);
-
-/**/
