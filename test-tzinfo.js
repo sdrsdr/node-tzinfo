@@ -590,9 +590,12 @@ module.exports = {
 					tzinfo.getCachedZoneInfo("europe/sofia").then(()=>{
 						t.fail('Promise resolved but should have been rejected');
 					}).catch((err)=> {
+						t.ok(tzinfo.getPreCachedZoneInfo('Europe/Sofia')==false);
 						let canonical_list=[];
 						tzinfo.precacheZones(canonical_list).then(()=>{
 							t.ok(canonical_list.length>10);
+							t.ok(tzinfo.getPreCachedZoneInfo('Europe/Sofia'));
+							t.ok(tzinfo.getPreCachedZoneInfo('America/Nonesuch')==false);
 							tzinfo.getCachedZoneInfo("eUrope/sofIa").then(()=>{
 								tzinfo.getCachedZoneInfo("americA/nonesucH").then(()=>{
 									t.fail('Promise resolved but should have been rejected');

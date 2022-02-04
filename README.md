@@ -169,10 +169,19 @@ Combines `readZoneinfoFile`, `parseZoneinfo` and caches the result
 &nbsp;
 
 ```ts
-export function precacheZones(capture_canonical_names?:string[]):Promise<true>;
+function precacheZones(capture_canonical_names?:string[]):Promise<true>;
 ```
 
 Asynchronously precache all zone info data. Post completion `getCachedZoneInfo` is just map lookup. `getCachedZoneInfo` does **not** depend on `precacheZones` but it will benefit significantly from the precache in expense of sub 10MB of RAM. Beside speed improvements zone name lookup becomes **case insensitive** as all zones are now known and such lookup can be done easily. If you want to capture the list of canonical zone names e.g. Europe/Paris etc, you need to pass an empty array as `capture_canonical_names` parameter. Zone names will be pushed there before a lowercase version is stored in internal map. With a SSD disk and i5 circa 2011 the precaching of recent zone info database takes about 600ms. Heap usage goes up by 9MB while the database is calculated as 5MB ondisk.
+
+---
+&nbsp;
+
+```ts
+function getPreCachedZoneInfo(zonename:string):info_t|false {
+```
+
+Do a lookup the precached maps and return the zone info if found. If `precacheZones` has not yet completed (usually under a second) the function will return `false`. `false` is also  returned if unknown zonename is requested.
 
 ---
 &nbsp;
@@ -204,7 +213,7 @@ getCachedZoneInfo('Europe/Sofia').then(zi=>{
 
 Change Log
 ----------
-
+- 0.8.0 - getPreCachedZoneInfo no-promises lookup of precached data
 - 0.7.0 - precacheZones, case insensitive zone name lookup
 - 0.6.0 - Port to TS, add getCachedZoneInfo, remove zoneinfoDir export, documentation changes
 - 0.5.1 - always find GMT zoneinfo

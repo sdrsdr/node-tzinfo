@@ -499,6 +499,14 @@ function precacheZonesInDir(dirname:string, zimap:Map<string,info_t>,capture_can
 })}
 
 
+export function getPreCachedZoneInfo(zonename:string):info_t|false {
+	
+	if (lczones2zi) {
+		const zi=lczones2zi.get(zonename.toLowerCase());
+		if (zi) return zi;
+	}
+	return false;
+}
 
 export function getCachedZoneInfo(zonename:string):Promise<info_t> {
 	
